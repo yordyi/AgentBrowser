@@ -1,4 +1,4 @@
-import { chromium, firefox, webkit, type Browser, type BrowserContext, type Page } from 'playwright';
+import { chromium, firefox, webkit, type Browser, type BrowserContext, type Page, type Frame, type Dialog } from 'playwright';
 import type { LaunchCommand } from './types.js';
 
 /**
@@ -9,6 +9,8 @@ export class BrowserManager {
   private contexts: BrowserContext[] = [];
   private pages: Page[] = [];
   private activePageIndex: number = 0;
+  private activeFrame: Frame | null = null;
+  private dialogHandler: ((dialog: Dialog) => Promise<void>) | null = null;
 
   /**
    * Check if browser is launched
@@ -25,6 +27,87 @@ export class BrowserManager {
       throw new Error('Browser not launched. Call launch first.');
     }
     return this.pages[this.activePageIndex];
+  }
+
+  /**
+   * Get the current frame (or page's main frame if no frame is selected)
+   */
+  getFrame(): Frame {
+    if (this.activeFrame) {
+      return this.activeFrame;
+    }
+    return this.getPage().mainFrame();
+  }
+
+  /**
+   * Switch to a frame by selector, name, or URL
+   */
+  async switchToFrame(options: { selector?: string; name?: string; url?: string }): Promise<void> {
+    const page = this.getPage();
+    
+    if (options.selector) {
+      const frameElement = await page.$(options.selector);
+      if (!frameElement) {
+        throw new Error(`Frame not found: ${options.selector}`);
+      }
+      const frame = await frameElement.contentFrame();
+      if (!frame) {
+        throw new Error(`Element is not a frame: ${options.selector}`);
+      }
+      this.activeFrame = frame;
+    } else if (options.name) {
+      const frame = page.frame({ name: options.name });
+      if (!frame) {
+        throw new Error(`Frame not found with name: ${options.name}`);
+      }
+      this.activeFrame = frame;
+    } else if (options.url) {
+      const frame = page.frame({ url: options.url });
+      if (!frame) {
+        throw new Error(`Frame not found with URL: ${options.url}`);
+      }
+      this.activeFrame = frame;
+    }
+  }
+
+  /**
+   * Switch back to main frame
+   */
+  switchToMainFrame(): void {
+    this.activeFrame = null;
+  }
+
+  /**
+   * Set up dialog handler
+   */
+  setDialogHandler(response: 'accept' | 'dismiss', promptText?: string): void {
+    const page = this.getPage();
+    
+    // Remove existing handler if any
+    if (this.dialogHandler) {
+      page.removeListener('dialog', this.dialogHandler);
+    }
+    
+    this.dialogHandler = async (dialog: Dialog) => {
+      if (response === 'accept') {
+        await dialog.accept(promptText);
+      } else {
+        await dialog.dismiss();
+      }
+    };
+    
+    page.on('dialog', this.dialogHandler);
+  }
+
+  /**
+   * Clear dialog handler
+   */
+  clearDialogHandler(): void {
+    if (this.dialogHandler) {
+      const page = this.getPage();
+      page.removeListener('dialog', this.dialogHandler);
+      this.dialogHandler = null;
+    }
   }
 
   /**

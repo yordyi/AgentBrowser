@@ -36,6 +36,138 @@ export interface TypeCommand extends BaseCommand {
   clear?: boolean;
 }
 
+export interface FillCommand extends BaseCommand {
+  action: 'fill';
+  selector: string;
+  value: string;
+}
+
+export interface CheckCommand extends BaseCommand {
+  action: 'check';
+  selector: string;
+}
+
+export interface UncheckCommand extends BaseCommand {
+  action: 'uncheck';
+  selector: string;
+}
+
+export interface UploadCommand extends BaseCommand {
+  action: 'upload';
+  selector: string;
+  files: string | string[];
+}
+
+export interface DoubleClickCommand extends BaseCommand {
+  action: 'dblclick';
+  selector: string;
+}
+
+export interface FocusCommand extends BaseCommand {
+  action: 'focus';
+  selector: string;
+}
+
+export interface DragCommand extends BaseCommand {
+  action: 'drag';
+  source: string;
+  target: string;
+}
+
+export interface FrameCommand extends BaseCommand {
+  action: 'frame';
+  selector?: string;
+  name?: string;
+  url?: string;
+}
+
+export interface MainFrameCommand extends BaseCommand {
+  action: 'mainframe';
+}
+
+export interface GetByRoleCommand extends BaseCommand {
+  action: 'getbyrole';
+  role: string;
+  name?: string;
+  subaction: 'click' | 'fill' | 'check' | 'hover';
+  value?: string;
+}
+
+export interface GetByTextCommand extends BaseCommand {
+  action: 'getbytext';
+  text: string;
+  exact?: boolean;
+  subaction: 'click' | 'hover';
+}
+
+export interface GetByLabelCommand extends BaseCommand {
+  action: 'getbylabel';
+  label: string;
+  subaction: 'click' | 'fill' | 'check';
+  value?: string;
+}
+
+export interface GetByPlaceholderCommand extends BaseCommand {
+  action: 'getbyplaceholder';
+  placeholder: string;
+  subaction: 'click' | 'fill';
+  value?: string;
+}
+
+export interface CookiesGetCommand extends BaseCommand {
+  action: 'cookies_get';
+  urls?: string[];
+}
+
+export interface CookiesSetCommand extends BaseCommand {
+  action: 'cookies_set';
+  cookies: Array<{
+    name: string;
+    value: string;
+    url?: string;
+    domain?: string;
+    path?: string;
+    expires?: number;
+    httpOnly?: boolean;
+    secure?: boolean;
+    sameSite?: 'Strict' | 'Lax' | 'None';
+  }>;
+}
+
+export interface CookiesClearCommand extends BaseCommand {
+  action: 'cookies_clear';
+}
+
+export interface StorageGetCommand extends BaseCommand {
+  action: 'storage_get';
+  key?: string;
+  type: 'local' | 'session';
+}
+
+export interface StorageSetCommand extends BaseCommand {
+  action: 'storage_set';
+  key: string;
+  value: string;
+  type: 'local' | 'session';
+}
+
+export interface StorageClearCommand extends BaseCommand {
+  action: 'storage_clear';
+  type: 'local' | 'session';
+}
+
+export interface DialogCommand extends BaseCommand {
+  action: 'dialog';
+  response: 'accept' | 'dismiss';
+  promptText?: string;
+}
+
+export interface PdfCommand extends BaseCommand {
+  action: 'pdf';
+  path: string;
+  format?: 'Letter' | 'Legal' | 'Tabloid' | 'Ledger' | 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6';
+}
+
 export interface PressCommand extends BaseCommand {
   action: 'press';
   key: string;
@@ -127,6 +259,19 @@ export type Command =
   | NavigateCommand
   | ClickCommand
   | TypeCommand
+  | FillCommand
+  | CheckCommand
+  | UncheckCommand
+  | UploadCommand
+  | DoubleClickCommand
+  | FocusCommand
+  | DragCommand
+  | FrameCommand
+  | MainFrameCommand
+  | GetByRoleCommand
+  | GetByTextCommand
+  | GetByLabelCommand
+  | GetByPlaceholderCommand
   | PressCommand
   | ScreenshotCommand
   | SnapshotCommand
@@ -141,7 +286,15 @@ export type Command =
   | TabListCommand
   | TabSwitchCommand
   | TabCloseCommand
-  | WindowNewCommand;
+  | WindowNewCommand
+  | CookiesGetCommand
+  | CookiesSetCommand
+  | CookiesClearCommand
+  | StorageGetCommand
+  | StorageSetCommand
+  | StorageClearCommand
+  | DialogCommand
+  | PdfCommand;
 
 // Response types
 export interface SuccessResponse<T = unknown> {

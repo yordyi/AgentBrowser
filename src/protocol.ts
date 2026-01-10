@@ -40,6 +40,138 @@ const typeSchema = baseCommandSchema.extend({
   clear: z.boolean().optional(),
 });
 
+const fillSchema = baseCommandSchema.extend({
+  action: z.literal('fill'),
+  selector: z.string().min(1),
+  value: z.string(),
+});
+
+const checkSchema = baseCommandSchema.extend({
+  action: z.literal('check'),
+  selector: z.string().min(1),
+});
+
+const uncheckSchema = baseCommandSchema.extend({
+  action: z.literal('uncheck'),
+  selector: z.string().min(1),
+});
+
+const uploadSchema = baseCommandSchema.extend({
+  action: z.literal('upload'),
+  selector: z.string().min(1),
+  files: z.union([z.string(), z.array(z.string())]),
+});
+
+const dblclickSchema = baseCommandSchema.extend({
+  action: z.literal('dblclick'),
+  selector: z.string().min(1),
+});
+
+const focusSchema = baseCommandSchema.extend({
+  action: z.literal('focus'),
+  selector: z.string().min(1),
+});
+
+const dragSchema = baseCommandSchema.extend({
+  action: z.literal('drag'),
+  source: z.string().min(1),
+  target: z.string().min(1),
+});
+
+const frameSchema = baseCommandSchema.extend({
+  action: z.literal('frame'),
+  selector: z.string().min(1).optional(),
+  name: z.string().optional(),
+  url: z.string().optional(),
+});
+
+const mainframeSchema = baseCommandSchema.extend({
+  action: z.literal('mainframe'),
+});
+
+const getByRoleSchema = baseCommandSchema.extend({
+  action: z.literal('getbyrole'),
+  role: z.string().min(1),
+  name: z.string().optional(),
+  subaction: z.enum(['click', 'fill', 'check', 'hover']),
+  value: z.string().optional(),
+});
+
+const getByTextSchema = baseCommandSchema.extend({
+  action: z.literal('getbytext'),
+  text: z.string().min(1),
+  exact: z.boolean().optional(),
+  subaction: z.enum(['click', 'hover']),
+});
+
+const getByLabelSchema = baseCommandSchema.extend({
+  action: z.literal('getbylabel'),
+  label: z.string().min(1),
+  subaction: z.enum(['click', 'fill', 'check']),
+  value: z.string().optional(),
+});
+
+const getByPlaceholderSchema = baseCommandSchema.extend({
+  action: z.literal('getbyplaceholder'),
+  placeholder: z.string().min(1),
+  subaction: z.enum(['click', 'fill']),
+  value: z.string().optional(),
+});
+
+const cookiesGetSchema = baseCommandSchema.extend({
+  action: z.literal('cookies_get'),
+  urls: z.array(z.string()).optional(),
+});
+
+const cookiesSetSchema = baseCommandSchema.extend({
+  action: z.literal('cookies_set'),
+  cookies: z.array(z.object({
+    name: z.string(),
+    value: z.string(),
+    url: z.string().optional(),
+    domain: z.string().optional(),
+    path: z.string().optional(),
+    expires: z.number().optional(),
+    httpOnly: z.boolean().optional(),
+    secure: z.boolean().optional(),
+    sameSite: z.enum(['Strict', 'Lax', 'None']).optional(),
+  })),
+});
+
+const cookiesClearSchema = baseCommandSchema.extend({
+  action: z.literal('cookies_clear'),
+});
+
+const storageGetSchema = baseCommandSchema.extend({
+  action: z.literal('storage_get'),
+  key: z.string().optional(),
+  type: z.enum(['local', 'session']),
+});
+
+const storageSetSchema = baseCommandSchema.extend({
+  action: z.literal('storage_set'),
+  key: z.string().min(1),
+  value: z.string(),
+  type: z.enum(['local', 'session']),
+});
+
+const storageClearSchema = baseCommandSchema.extend({
+  action: z.literal('storage_clear'),
+  type: z.enum(['local', 'session']),
+});
+
+const dialogSchema = baseCommandSchema.extend({
+  action: z.literal('dialog'),
+  response: z.enum(['accept', 'dismiss']),
+  promptText: z.string().optional(),
+});
+
+const pdfSchema = baseCommandSchema.extend({
+  action: z.literal('pdf'),
+  path: z.string().min(1),
+  format: z.enum(['Letter', 'Legal', 'Tabloid', 'Ledger', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6']).optional(),
+});
+
 const pressSchema = baseCommandSchema.extend({
   action: z.literal('press'),
   key: z.string().min(1),
@@ -134,6 +266,19 @@ const commandSchema = z.discriminatedUnion('action', [
   navigateSchema,
   clickSchema,
   typeSchema,
+  fillSchema,
+  checkSchema,
+  uncheckSchema,
+  uploadSchema,
+  dblclickSchema,
+  focusSchema,
+  dragSchema,
+  frameSchema,
+  mainframeSchema,
+  getByRoleSchema,
+  getByTextSchema,
+  getByLabelSchema,
+  getByPlaceholderSchema,
   pressSchema,
   screenshotSchema,
   snapshotSchema,
@@ -149,6 +294,14 @@ const commandSchema = z.discriminatedUnion('action', [
   tabSwitchSchema,
   tabCloseSchema,
   windowNewSchema,
+  cookiesGetSchema,
+  cookiesSetSchema,
+  cookiesClearSchema,
+  storageGetSchema,
+  storageSetSchema,
+  storageClearSchema,
+  dialogSchema,
+  pdfSchema,
 ]);
 
 // Parse result type

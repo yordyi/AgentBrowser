@@ -60,17 +60,52 @@ ${c('yellow', 'Usage:')}
 ${c('yellow', 'Commands:')}
   ${c('cyan', 'open')} <url>                    Open a URL in the browser
   ${c('cyan', 'click')} <selector>              Click an element
+  ${c('cyan', 'dblclick')} <selector>           Double-click an element
   ${c('cyan', 'type')} <selector> <text>        Type text into an element
+  ${c('cyan', 'fill')} <selector> <value>       Clear and fill input
   ${c('cyan', 'press')} <key>                   Press a keyboard key
+  ${c('cyan', 'check')} <selector>              Check a checkbox/radio
+  ${c('cyan', 'uncheck')} <selector>            Uncheck a checkbox
+  ${c('cyan', 'select')} <selector> <value>     Select dropdown option
+  ${c('cyan', 'hover')} <selector>              Hover over an element
+  ${c('cyan', 'focus')} <selector>              Focus an element
+  ${c('cyan', 'drag')} <source> <target>        Drag and drop
+  ${c('cyan', 'upload')} <selector> <file...>   Upload files
   ${c('cyan', 'wait')} <selector|text|ms>       Wait for element, text, or duration
   ${c('cyan', 'screenshot')} [path]             Take a screenshot
+  ${c('cyan', 'pdf')} <path>                    Save page as PDF
   ${c('cyan', 'snapshot')}                      Get accessibility tree (for agents)
   ${c('cyan', 'extract')} <selector>            Extract element content
   ${c('cyan', 'eval')} <script>                 Evaluate JavaScript
   ${c('cyan', 'scroll')} <direction> [amount]   Scroll the page
-  ${c('cyan', 'hover')} <selector>              Hover over an element
-  ${c('cyan', 'select')} <selector> <value>     Select dropdown option
   ${c('cyan', 'close')}                         Close browser and stop daemon
+
+${c('yellow', 'Locator Commands:')}
+  ${c('cyan', 'role')} <role> click|fill|check  Find by ARIA role
+  ${c('cyan', 'text')} <text> click|hover       Find by text content
+  ${c('cyan', 'label')} <label> click|fill      Find by label
+  ${c('cyan', 'placeholder')} <ph> click|fill   Find by placeholder
+
+${c('yellow', 'Frame Commands:')}
+  ${c('cyan', 'frame')} <selector>              Switch to iframe
+  ${c('cyan', 'mainframe')}                     Switch back to main frame
+
+${c('yellow', 'Cookie Commands:')}
+  ${c('cyan', 'cookies')}                       Get all cookies
+  ${c('cyan', 'cookies set')} <json>            Set cookies
+  ${c('cyan', 'cookies clear')}                 Clear all cookies
+
+${c('yellow', 'Storage Commands:')}
+  ${c('cyan', 'storage local')} [key]           Get localStorage
+  ${c('cyan', 'storage local set')} <k> <v>     Set localStorage
+  ${c('cyan', 'storage local clear')}           Clear localStorage
+  ${c('cyan', 'storage session')} [key]         Get sessionStorage
+  ${c('cyan', 'storage session set')} <k> <v>   Set sessionStorage
+  ${c('cyan', 'storage session clear')}         Clear sessionStorage
+
+${c('yellow', 'Dialog Commands:')}
+  ${c('cyan', 'dialog accept')} [text]          Accept next dialog
+  ${c('cyan', 'dialog dismiss')}                Dismiss next dialog
 
 ${c('yellow', 'Tab/Window Commands:')}
   ${c('cyan', 'tab new')}                       Open a new tab
@@ -145,7 +180,37 @@ function printResponse(response: Response, jsonMode: boolean): void {
     console.log(c('dim', `  ${(data.base64 as string).length} bytes`));
   } else if (data.path) {
     console.log(c('green', '✓'), `Saved to ${data.path}`);
-  } else if (data.clicked || data.typed || data.pressed || data.hovered || data.scrolled || data.selected || data.waited) {
+  } else if (data.cookies) {
+    // Cookies get
+    const cookies = data.cookies as Array<{ name: string; value: string; domain?: string }>;
+    if (cookies.length === 0) {
+      console.log(c('dim', 'No cookies'));
+    } else {
+      cookies.forEach(cookie => {
+        console.log(`${c('cyan', cookie.name)}: ${cookie.value}`);
+        if (cookie.domain) console.log(c('dim', `  domain: ${cookie.domain}`));
+      });
+    }
+  } else if (data.data) {
+    // Storage get (all)
+    const storage = data.data as Record<string, string>;
+    const keys = Object.keys(storage);
+    if (keys.length === 0) {
+      console.log(c('dim', 'Empty storage'));
+    } else {
+      keys.forEach(key => {
+        console.log(`${c('cyan', key)}: ${storage[key]}`);
+      });
+    }
+  } else if (data.value !== undefined && data.key) {
+    // Storage get (single key)
+    console.log(data.value ?? c('dim', 'null'));
+  } else if (data.uploaded) {
+    const files = data.uploaded as string[];
+    console.log(c('green', '✓'), `Uploaded ${files.length} file(s)`);
+  } else if (data.handler) {
+    console.log(c('green', '✓'), `Dialog handler set to ${data.response}`);
+  } else if (data.clicked || data.typed || data.pressed || data.hovered || data.scrolled || data.selected || data.waited || data.filled || data.checked || data.unchecked || data.focused || data.dragged || data.switched || data.set || data.cleared) {
     console.log(c('green', '✓'), 'Done');
   } else if (data.launched) {
     console.log(c('green', '✓'), 'Browser launched');
@@ -204,6 +269,7 @@ async function main(): Promise<void> {
     const prev = args[i - 1];
     if (prev === '--selector' || prev === '-s') return false;
     if (prev === '--session') return false;
+    if (prev === '--name' || prev === '-n') return false;
     return true;
   });
   const command = cleanArgs[0];
@@ -214,6 +280,16 @@ async function main(): Promise<void> {
   if (sIdx !== -1 && args[sIdx + 1]) {
     selectorOverride = args[sIdx + 1];
   }
+  
+  // Find --name value (for locator commands)
+  let nameOverride: string | undefined;
+  const nIdx = args.findIndex(a => a === '--name' || a === '-n');
+  if (nIdx !== -1 && args[nIdx + 1]) {
+    nameOverride = args[nIdx + 1];
+  }
+  
+  // Find --exact flag
+  const exactMode = args.includes('--exact');
   
   const id = genId();
   let cmd: Record<string, unknown>;
@@ -251,6 +327,80 @@ async function main(): Promise<void> {
         process.exit(1);
       }
       cmd = { id, action: 'type', selector, text, clear: true };
+      break;
+    }
+    
+    case 'fill': {
+      const selector = cleanArgs[1];
+      const value = cleanArgs.slice(2).join(' ');
+      if (!selector || value === undefined) {
+        console.error(c('red', 'Error:'), 'Selector and value required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'fill', selector, value };
+      break;
+    }
+    
+    case 'check': {
+      const selector = cleanArgs[1];
+      if (!selector) {
+        console.error(c('red', 'Error:'), 'Selector required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'check', selector };
+      break;
+    }
+    
+    case 'uncheck': {
+      const selector = cleanArgs[1];
+      if (!selector) {
+        console.error(c('red', 'Error:'), 'Selector required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'uncheck', selector };
+      break;
+    }
+    
+    case 'dblclick':
+    case 'doubleclick': {
+      const selector = cleanArgs[1];
+      if (!selector) {
+        console.error(c('red', 'Error:'), 'Selector required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'dblclick', selector };
+      break;
+    }
+    
+    case 'focus': {
+      const selector = cleanArgs[1];
+      if (!selector) {
+        console.error(c('red', 'Error:'), 'Selector required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'focus', selector };
+      break;
+    }
+    
+    case 'drag': {
+      const source = cleanArgs[1];
+      const target = cleanArgs[2];
+      if (!source || !target) {
+        console.error(c('red', 'Error:'), 'Source and target selectors required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'drag', source, target };
+      break;
+    }
+    
+    case 'upload': {
+      const selector = cleanArgs[1];
+      const files = cleanArgs.slice(2);
+      if (!selector || files.length === 0) {
+        console.error(c('red', 'Error:'), 'Selector and file(s) required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'upload', selector, files };
       break;
     }
     
@@ -354,6 +504,136 @@ async function main(): Promise<void> {
         process.exit(1);
       }
       cmd = { id, action: 'select', selector, values: value };
+      break;
+    }
+    
+    case 'pdf': {
+      const pdfPath = cleanArgs[1];
+      if (!pdfPath) {
+        console.error(c('red', 'Error:'), 'Path required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'pdf', path: pdfPath };
+      break;
+    }
+    
+    case 'frame': {
+      const selector = cleanArgs[1];
+      if (!selector) {
+        console.error(c('red', 'Error:'), 'Frame selector required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'frame', selector };
+      break;
+    }
+    
+    case 'mainframe': {
+      cmd = { id, action: 'mainframe' };
+      break;
+    }
+    
+    case 'role': {
+      const role = cleanArgs[1];
+      const subaction = cleanArgs[2] as 'click' | 'fill' | 'check' | 'hover';
+      const value = cleanArgs[3];
+      if (!role || !subaction) {
+        console.error(c('red', 'Error:'), 'Role and action required (e.g., veb role button click --name "Submit")');
+        process.exit(1);
+      }
+      cmd = { id, action: 'getbyrole', role, name: nameOverride, subaction, value };
+      break;
+    }
+    
+    case 'text': {
+      const text = cleanArgs[1];
+      const subaction = cleanArgs[2] as 'click' | 'hover';
+      if (!text || !subaction) {
+        console.error(c('red', 'Error:'), 'Text and action required (e.g., veb text "Submit" click)');
+        process.exit(1);
+      }
+      cmd = { id, action: 'getbytext', text, exact: exactMode, subaction };
+      break;
+    }
+    
+    case 'label': {
+      const label = cleanArgs[1];
+      const subaction = cleanArgs[2] as 'click' | 'fill' | 'check';
+      const value = cleanArgs[3];
+      if (!label || !subaction) {
+        console.error(c('red', 'Error:'), 'Label and action required (e.g., veb label "Email" fill "test@test.com")');
+        process.exit(1);
+      }
+      cmd = { id, action: 'getbylabel', label, subaction, value };
+      break;
+    }
+    
+    case 'placeholder': {
+      const placeholder = cleanArgs[1];
+      const subaction = cleanArgs[2] as 'click' | 'fill';
+      const value = cleanArgs[3];
+      if (!placeholder || !subaction) {
+        console.error(c('red', 'Error:'), 'Placeholder and action required');
+        process.exit(1);
+      }
+      cmd = { id, action: 'getbyplaceholder', placeholder, subaction, value };
+      break;
+    }
+    
+    case 'cookies': {
+      const subCmd = cleanArgs[1];
+      
+      if (subCmd === 'set') {
+        const jsonStr = cleanArgs.slice(2).join(' ');
+        try {
+          const cookies = JSON.parse(jsonStr);
+          cmd = { id, action: 'cookies_set', cookies: Array.isArray(cookies) ? cookies : [cookies] };
+        } catch {
+          console.error(c('red', 'Error:'), 'Invalid JSON for cookies');
+          process.exit(1);
+        }
+      } else if (subCmd === 'clear') {
+        cmd = { id, action: 'cookies_clear' };
+      } else {
+        cmd = { id, action: 'cookies_get' };
+      }
+      break;
+    }
+    
+    case 'storage': {
+      const storageType = cleanArgs[1]; // 'local' or 'session'
+      const subCmd = cleanArgs[2];
+      
+      if (storageType !== 'local' && storageType !== 'session') {
+        console.error(c('red', 'Error:'), 'Storage type must be "local" or "session"');
+        process.exit(1);
+      }
+      
+      if (subCmd === 'set') {
+        const key = cleanArgs[3];
+        const value = cleanArgs.slice(4).join(' ');
+        if (!key) {
+          console.error(c('red', 'Error:'), 'Key required');
+          process.exit(1);
+        }
+        cmd = { id, action: 'storage_set', type: storageType, key, value };
+      } else if (subCmd === 'clear') {
+        cmd = { id, action: 'storage_clear', type: storageType };
+      } else {
+        // Get - subCmd might be a key or undefined
+        cmd = { id, action: 'storage_get', type: storageType, key: subCmd };
+      }
+      break;
+    }
+    
+    case 'dialog': {
+      const response = cleanArgs[1];
+      const promptText = cleanArgs[2];
+      
+      if (response !== 'accept' && response !== 'dismiss') {
+        console.error(c('red', 'Error:'), 'Dialog response must be "accept" or "dismiss"');
+        process.exit(1);
+      }
+      cmd = { id, action: 'dialog', response, promptText };
       break;
     }
     

@@ -1,4 +1,4 @@
-import type { Page } from 'playwright';
+import type { Page, Frame } from 'playwright';
 import type { BrowserManager } from './browser.js';
 import type {
   Command,
@@ -6,6 +6,18 @@ import type {
   NavigateCommand,
   ClickCommand,
   TypeCommand,
+  FillCommand,
+  CheckCommand,
+  UncheckCommand,
+  UploadCommand,
+  DoubleClickCommand,
+  FocusCommand,
+  DragCommand,
+  FrameCommand,
+  GetByRoleCommand,
+  GetByTextCommand,
+  GetByLabelCommand,
+  GetByPlaceholderCommand,
   PressCommand,
   ScreenshotCommand,
   EvaluateCommand,
@@ -17,6 +29,12 @@ import type {
   TabSwitchCommand,
   TabCloseCommand,
   WindowNewCommand,
+  CookiesSetCommand,
+  StorageGetCommand,
+  StorageSetCommand,
+  StorageClearCommand,
+  DialogCommand,
+  PdfCommand,
   NavigateData,
   ScreenshotData,
   EvaluateData,
@@ -50,6 +68,32 @@ export async function executeCommand(
         return await handleClick(command, browser);
       case 'type':
         return await handleType(command, browser);
+      case 'fill':
+        return await handleFill(command, browser);
+      case 'check':
+        return await handleCheck(command, browser);
+      case 'uncheck':
+        return await handleUncheck(command, browser);
+      case 'upload':
+        return await handleUpload(command, browser);
+      case 'dblclick':
+        return await handleDoubleClick(command, browser);
+      case 'focus':
+        return await handleFocus(command, browser);
+      case 'drag':
+        return await handleDrag(command, browser);
+      case 'frame':
+        return await handleFrame(command, browser);
+      case 'mainframe':
+        return await handleMainFrame(command, browser);
+      case 'getbyrole':
+        return await handleGetByRole(command, browser);
+      case 'getbytext':
+        return await handleGetByText(command, browser);
+      case 'getbylabel':
+        return await handleGetByLabel(command, browser);
+      case 'getbyplaceholder':
+        return await handleGetByPlaceholder(command, browser);
       case 'press':
         return await handlePress(command, browser);
       case 'screenshot':
@@ -80,6 +124,22 @@ export async function executeCommand(
         return await handleTabClose(command, browser);
       case 'window_new':
         return await handleWindowNew(command, browser);
+      case 'cookies_get':
+        return await handleCookiesGet(command, browser);
+      case 'cookies_set':
+        return await handleCookiesSet(command, browser);
+      case 'cookies_clear':
+        return await handleCookiesClear(command, browser);
+      case 'storage_get':
+        return await handleStorageGet(command, browser);
+      case 'storage_set':
+        return await handleStorageSet(command, browser);
+      case 'storage_clear':
+        return await handleStorageClear(command, browser);
+      case 'dialog':
+        return await handleDialog(command, browser);
+      case 'pdf':
+        return await handlePdf(command, browser);
       default: {
         // TypeScript narrows to never here, but we handle it for safety
         const unknownCommand = command as { id: string; action: string };
@@ -371,4 +431,269 @@ async function handleWindowNew(
 ): Promise<Response<TabNewData>> {
   const result = await browser.newWindow(command.viewport);
   return successResponse(command.id, result);
+}
+
+// New handlers for enhanced Playwright parity
+
+async function handleFill(
+  command: FillCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const frame = browser.getFrame();
+  await frame.fill(command.selector, command.value);
+  return successResponse(command.id, { filled: true });
+}
+
+async function handleCheck(
+  command: CheckCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const frame = browser.getFrame();
+  await frame.check(command.selector);
+  return successResponse(command.id, { checked: true });
+}
+
+async function handleUncheck(
+  command: UncheckCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const frame = browser.getFrame();
+  await frame.uncheck(command.selector);
+  return successResponse(command.id, { unchecked: true });
+}
+
+async function handleUpload(
+  command: UploadCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const frame = browser.getFrame();
+  const files = Array.isArray(command.files) ? command.files : [command.files];
+  await frame.setInputFiles(command.selector, files);
+  return successResponse(command.id, { uploaded: files });
+}
+
+async function handleDoubleClick(
+  command: DoubleClickCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const frame = browser.getFrame();
+  await frame.dblclick(command.selector);
+  return successResponse(command.id, { clicked: true });
+}
+
+async function handleFocus(
+  command: FocusCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const frame = browser.getFrame();
+  await frame.focus(command.selector);
+  return successResponse(command.id, { focused: true });
+}
+
+async function handleDrag(
+  command: DragCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const frame = browser.getFrame();
+  await frame.dragAndDrop(command.source, command.target);
+  return successResponse(command.id, { dragged: true });
+}
+
+async function handleFrame(
+  command: FrameCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  await browser.switchToFrame({
+    selector: command.selector,
+    name: command.name,
+    url: command.url,
+  });
+  return successResponse(command.id, { switched: true });
+}
+
+async function handleMainFrame(
+  command: Command & { action: 'mainframe' },
+  browser: BrowserManager
+): Promise<Response> {
+  browser.switchToMainFrame();
+  return successResponse(command.id, { switched: true });
+}
+
+async function handleGetByRole(
+  command: GetByRoleCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const locator = page.getByRole(command.role as any, { name: command.name });
+  
+  switch (command.subaction) {
+    case 'click':
+      await locator.click();
+      return successResponse(command.id, { clicked: true });
+    case 'fill':
+      await locator.fill(command.value ?? '');
+      return successResponse(command.id, { filled: true });
+    case 'check':
+      await locator.check();
+      return successResponse(command.id, { checked: true });
+    case 'hover':
+      await locator.hover();
+      return successResponse(command.id, { hovered: true });
+  }
+}
+
+async function handleGetByText(
+  command: GetByTextCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const locator = page.getByText(command.text, { exact: command.exact });
+  
+  switch (command.subaction) {
+    case 'click':
+      await locator.click();
+      return successResponse(command.id, { clicked: true });
+    case 'hover':
+      await locator.hover();
+      return successResponse(command.id, { hovered: true });
+  }
+}
+
+async function handleGetByLabel(
+  command: GetByLabelCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const locator = page.getByLabel(command.label);
+  
+  switch (command.subaction) {
+    case 'click':
+      await locator.click();
+      return successResponse(command.id, { clicked: true });
+    case 'fill':
+      await locator.fill(command.value ?? '');
+      return successResponse(command.id, { filled: true });
+    case 'check':
+      await locator.check();
+      return successResponse(command.id, { checked: true });
+  }
+}
+
+async function handleGetByPlaceholder(
+  command: GetByPlaceholderCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const locator = page.getByPlaceholder(command.placeholder);
+  
+  switch (command.subaction) {
+    case 'click':
+      await locator.click();
+      return successResponse(command.id, { clicked: true });
+    case 'fill':
+      await locator.fill(command.value ?? '');
+      return successResponse(command.id, { filled: true });
+  }
+}
+
+async function handleCookiesGet(
+  command: Command & { action: 'cookies_get'; urls?: string[] },
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const context = page.context();
+  const cookies = await context.cookies(command.urls);
+  return successResponse(command.id, { cookies });
+}
+
+async function handleCookiesSet(
+  command: CookiesSetCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const context = page.context();
+  await context.addCookies(command.cookies);
+  return successResponse(command.id, { set: true });
+}
+
+async function handleCookiesClear(
+  command: Command & { action: 'cookies_clear' },
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const context = page.context();
+  await context.clearCookies();
+  return successResponse(command.id, { cleared: true });
+}
+
+async function handleStorageGet(
+  command: StorageGetCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const storageType = command.type === 'local' ? 'localStorage' : 'sessionStorage';
+  
+  if (command.key) {
+    const value = await page.evaluate(
+      `${storageType}.getItem(${JSON.stringify(command.key)})`
+    );
+    return successResponse(command.id, { key: command.key, value });
+  } else {
+    const data = await page.evaluate(`
+      (() => {
+        const storage = ${storageType};
+        const result = {};
+        for (let i = 0; i < storage.length; i++) {
+          const key = storage.key(i);
+          if (key) result[key] = storage.getItem(key);
+        }
+        return result;
+      })()
+    `);
+    return successResponse(command.id, { data });
+  }
+}
+
+async function handleStorageSet(
+  command: StorageSetCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const storageType = command.type === 'local' ? 'localStorage' : 'sessionStorage';
+  
+  await page.evaluate(
+    `${storageType}.setItem(${JSON.stringify(command.key)}, ${JSON.stringify(command.value)})`
+  );
+  return successResponse(command.id, { set: true });
+}
+
+async function handleStorageClear(
+  command: StorageClearCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  const storageType = command.type === 'local' ? 'localStorage' : 'sessionStorage';
+  
+  await page.evaluate(`${storageType}.clear()`);
+  return successResponse(command.id, { cleared: true });
+}
+
+async function handleDialog(
+  command: DialogCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  browser.setDialogHandler(command.response, command.promptText);
+  return successResponse(command.id, { handler: 'set', response: command.response });
+}
+
+async function handlePdf(
+  command: PdfCommand,
+  browser: BrowserManager
+): Promise<Response> {
+  const page = browser.getPage();
+  await page.pdf({
+    path: command.path,
+    format: command.format ?? 'Letter',
+  });
+  return successResponse(command.id, { path: command.path });
 }

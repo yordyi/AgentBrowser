@@ -1,6 +1,6 @@
 # veb
 
-Headless browser automation CLI for agents and humans.
+Headless browser automation CLI for agents and humans. Near-complete Playwright parity.
 
 ## Installation
 
@@ -13,70 +13,99 @@ pnpm build
 ## Usage
 
 ```bash
-# Open a URL (auto-starts browser daemon)
+# Navigation
 veb open https://example.com
 
-# Click elements
+# Clicking
 veb click "#submit-btn"
-veb click "text=Sign In"
+veb dblclick "#item"
 
-# Type into inputs
-veb type "#email" hello@example.com
-veb type "#search" "search query"
+# Form input
+veb type "#search" "query"           # Type character by character
+veb fill "#email" "test@example.com" # Clear and fill (faster)
+veb check "#agree"                   # Check checkbox/radio
+veb uncheck "#newsletter"            # Uncheck checkbox
+veb select "#country" "US"           # Select dropdown
 
-# Press keyboard keys
+# Keyboard
 veb press Enter
 veb press Tab
 
-# Wait for things
-veb wait "#loading"              # wait for selector
-veb wait --text "Welcome"        # wait for text
-veb wait 2000                    # wait 2 seconds
+# Mouse
+veb hover "#menu"
+veb focus "#input"
+veb drag "#source" "#target"
 
-# Take screenshots
+# File upload
+veb upload "#file-input" ./document.pdf
+veb upload "#files" ./a.png ./b.png
+
+# Waiting
+veb wait "#loading"              # Wait for selector
+veb wait --text "Welcome"        # Wait for text
+veb wait 2000                    # Wait 2 seconds
+
+# Screenshots & PDF
 veb screenshot page.png
-veb screenshot --full page.png   # full page
-veb screenshot -s "#hero"        # specific element
+veb screenshot --full page.png   # Full page
+veb screenshot -s "#hero"        # Specific element
+veb pdf report.pdf
 
-# Get accessibility snapshot (great for AI agents)
-veb snapshot
+# Content extraction
+veb snapshot                     # Accessibility tree (best for agents)
+veb extract "#main"              # Get HTML
+veb eval "document.title"        # Run JavaScript
 
-# Extract HTML content
-veb extract "table"
-veb extract "#main"
-
-# Evaluate JavaScript
-veb eval "document.title"
-veb eval "window.location.href"
-
-# Scroll the page
+# Scrolling
 veb scroll down 500
 veb scroll up
 veb scroll -s "#container" down
 
-# Interact with dropdowns
-veb select "#country" "US"
+# Semantic locators (Playwright's recommended approach)
+veb role button click --name "Submit"
+veb role textbox fill "hello" --name "Email"
+veb text "Sign In" click
+veb text "Submit" click --exact
+veb label "Email" fill "test@test.com"
+veb placeholder "Search..." fill "query"
 
-# Hover over elements
-veb hover "#menu"
+# Frames/iframes
+veb frame "#iframe"              # Switch to iframe
+veb mainframe                    # Switch back to main
 
-# Tab management
-veb tab new                    # Open new tab
-veb tab list                   # List all tabs
-veb tab 0                      # Switch to tab 0
-veb tab close                  # Close current tab
-veb tab close 1                # Close tab 1
+# Cookies
+veb cookies                      # Get all cookies
+veb cookies set '[{"name":"session","value":"abc123","domain":".example.com"}]'
+veb cookies clear
 
-# Window management
-veb window new                 # Open new window
+# Storage
+veb storage local                # Get all localStorage
+veb storage local myKey          # Get specific key
+veb storage local set key value  # Set value
+veb storage local clear          # Clear localStorage
+veb storage session              # sessionStorage (same commands)
 
-# Session management (isolate multiple agents)
+# Dialogs (alerts, confirms, prompts)
+veb dialog accept                # Accept next dialog
+veb dialog accept "input text"   # Accept prompt with text
+veb dialog dismiss               # Dismiss next dialog
+
+# Tabs
+veb tab new
+veb tab list
+veb tab 0                        # Switch to tab
+veb tab close
+
+# Windows
+veb window new
+
+# Sessions (isolate multiple agents)
 veb --session agent1 open example.com
 veb --session agent2 open google.com
-veb session list               # List active sessions
-VEB_SESSION=agent1 veb eval "document.title"
+VEB_SESSION=agent1 veb click "#btn"
+veb session list
 
-# Close browser (stops daemon)
+# Close browser
 veb close
 ```
 
@@ -85,85 +114,111 @@ veb close
 Use `--json` flag for machine-readable output:
 
 ```bash
-veb open https://example.com --json
-# {"id":"abc123","success":true,"data":{"url":"https://example.com/","title":"Example Domain"}}
-
 veb snapshot --json
-# {"id":"def456","success":true,"data":{"snapshot":"..."}}
+veb eval "document.title" --json
 ```
-
-## How It Works
-
-veb runs a background daemon that keeps the browser open between commands. The first command automatically starts the daemon. Use `veb close` to shut it down.
 
 ## Commands Reference
 
+### Navigation & Interaction
 | Command | Description |
 |---------|-------------|
-| `open <url>` | Navigate to a URL |
-| `click <selector>` | Click an element |
-| `type <selector> <text>` | Type text into an element |
-| `press <key>` | Press a keyboard key |
-| `wait <selector\|text\|ms>` | Wait for condition |
-| `screenshot [path]` | Take a screenshot |
-| `snapshot` | Get accessibility tree |
-| `extract <selector>` | Get element HTML |
+| `open <url>` | Navigate to URL |
+| `click <selector>` | Click element |
+| `dblclick <selector>` | Double-click |
+| `type <selector> <text>` | Type text |
+| `fill <selector> <value>` | Clear & fill |
+| `press <key>` | Press key |
+| `check <selector>` | Check checkbox |
+| `uncheck <selector>` | Uncheck |
+| `select <selector> <value>` | Select option |
+| `hover <selector>` | Hover |
+| `focus <selector>` | Focus |
+| `drag <src> <target>` | Drag & drop |
+| `upload <selector> <files>` | Upload files |
+| `scroll <dir> [amount]` | Scroll |
+
+### Semantic Locators
+| Command | Description |
+|---------|-------------|
+| `role <role> <action>` | By ARIA role |
+| `text <text> <action>` | By text |
+| `label <label> <action>` | By label |
+| `placeholder <ph> <action>` | By placeholder |
+
+### Content & Screenshots
+| Command | Description |
+|---------|-------------|
+| `screenshot [path]` | Screenshot |
+| `pdf <path>` | Save as PDF |
+| `snapshot` | Accessibility tree |
+| `extract <selector>` | Get HTML |
 | `eval <script>` | Run JavaScript |
-| `scroll <dir> [amount]` | Scroll page |
-| `hover <selector>` | Hover over element |
-| `select <selector> <val>` | Select dropdown option |
-| `tab new` | Open new tab |
-| `tab list` | List all tabs |
-| `tab <index>` | Switch to tab |
+
+### Browser State
+| Command | Description |
+|---------|-------------|
+| `cookies` | Get cookies |
+| `cookies set <json>` | Set cookies |
+| `cookies clear` | Clear cookies |
+| `storage local [key]` | Get localStorage |
+| `storage local set <k> <v>` | Set localStorage |
+| `storage local clear` | Clear localStorage |
+| `dialog accept [text]` | Accept dialog |
+| `dialog dismiss` | Dismiss dialog |
+
+### Frames & Tabs
+| Command | Description |
+|---------|-------------|
+| `frame <selector>` | Switch to frame |
+| `mainframe` | Back to main |
+| `tab new` | New tab |
+| `tab list` | List tabs |
+| `tab <index>` | Switch tab |
 | `tab close [index]` | Close tab |
-| `window new` | Open new window |
-| `session` | Show current session |
-| `session list` | List active sessions |
+| `window new` | New window |
+
+### Session & Control
+| Command | Description |
+|---------|-------------|
+| `wait <sel\|text\|ms>` | Wait for condition |
+| `session` | Show session |
+| `session list` | List sessions |
 | `close` | Close browser |
-
-## Sessions
-
-Sessions allow multiple agents to use veb simultaneously without interfering with each other. Each session runs its own isolated browser instance.
-
-```bash
-# Using --session flag
-veb --session agent1 open https://site-a.com
-veb --session agent2 open https://site-b.com
-
-# Using environment variable
-export VEB_SESSION=agent1
-veb open https://example.com
-veb click "#button"
-
-# List all running sessions
-veb session list
-
-# Close a specific session
-veb --session agent1 close
-```
-
-Sessions are identified by name. If no session is specified, the "default" session is used.
 
 ## Options
 
 | Option | Description |
 |--------|-------------|
-| `--session <name>` | Use isolated browser session |
-| `--json` | Output raw JSON |
+| `--session <name>` | Use isolated session |
+| `--json` | JSON output |
 | `--full, -f` | Full page screenshot |
-| `--text, -t` | Wait for text |
 | `--selector, -s` | Target element |
-| `--debug` | Show debug timing info |
-| `--help, -h` | Show help |
+| `--name, -n` | Locator name filter |
+| `--exact` | Exact text match |
+| `--text, -t` | Wait for text |
+| `--debug` | Debug output |
 
 ## Selectors
 
 veb supports all Playwright selectors:
 
-- CSS: `#id`, `.class`, `div.container`
-- Text: `text=Click me`, `"Click me"`
-- XPath: `xpath=//button`
-- Role: `role=button[name="Submit"]`
+```bash
+# CSS
+veb click "#id"
+veb click ".class"
+veb click "div.container > button"
+
+# Text
+veb click "text=Click me"
+
+# XPath
+veb click "xpath=//button[@type='submit']"
+
+# Semantic (recommended)
+veb role button click --name "Submit"
+veb label "Email" fill "test@test.com"
+```
 
 ## License
 
