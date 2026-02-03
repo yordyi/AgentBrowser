@@ -1,0 +1,16 @@
+{
+  "name": "agent-browser-v2",
+  "version": "2.0.0",
+  "description": "Browser automation via Chrome Extension + Native Messaging + MCP",
+  "type": "module",
+  "main": "mcp-server.js",
+  "bin": {
+    "agent-browser": "./mcp-server.js"
+  },
+  "scripts": {
+    "start": "node mcp-server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

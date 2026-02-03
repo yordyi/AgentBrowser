@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Agent Browser V2",
+  "version": "1.0.0",
+  "description": "Browser automation via Native Messaging",
+
+  "permissions": [
+    "nativeMessaging",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  }
+}

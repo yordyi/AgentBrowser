@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "agent-browser": {
+      "command": "node",
+      "args": ["/Volumes/Samsung/Project/agent-browser/extension-v2/mcp-server.js"],
+      "env": {}
+    }
+  }
+}
