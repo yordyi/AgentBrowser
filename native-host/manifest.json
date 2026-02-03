@@ -1,9 +1,0 @@
-{
-  "name": "com.agent_browser.host",
-  "description": "Agent Browser Native Messaging Host - Bridges Chrome extension with MCP Server",
-  "path": "/PATH/TO/host.js",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://EXTENSION_ID_PLACEHOLDER/"
-  ]
-}
