@@ -7,6 +7,7 @@ This directory contains business planning documents for AgentBrowser.
 | File | Description | Date |
 |------|-------------|------|
 | [market-evaluation-2026-02.md](./market-evaluation-2026-02.md) | Market evaluation, competitive analysis, and development roadmap | 2026-02-03 |
+| [development-plan-2026-Q1.md](./development-plan-2026-Q1.md) | Detailed development plan with testing strategy (12-week plan) | 2026-02-03 |
 
 ## Overview
 
