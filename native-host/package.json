@@ -1,0 +1,37 @@
+{
+  "name": "@agent-browser/native-host",
+  "version": "1.0.0",
+  "description": "Native Messaging Host and MCP Server for Agent Browser Chrome Extension",
+  "type": "module",
+  "main": "mcp-server.js",
+  "bin": {
+    "agent-browser-host": "./host.js",
+    "agent-browser-mcp": "./mcp-server.js"
+  },
+  "scripts": {
+    "start": "node mcp-server.js",
+    "host": "node host.js",
+    "install:macos": "./install-macos.sh",
+    "install:linux": "./install-linux.sh"
+  },
+  "keywords": [
+    "chrome-extension",
+    "native-messaging",
+    "mcp",
+    "model-context-protocol",
+    "browser-automation",
+    "agent-browser"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel-labs/agent-browser.git",
+    "directory": "native-host"
+  }
+}
