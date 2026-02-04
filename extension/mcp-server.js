@@ -41,19 +41,17 @@ function connect() {
       socket = null;
     });
 
-    let buffer = Buffer.alloc(0);
+    // Newline-delimited JSON
+    let buffer = '';
     socket.on('data', (chunk) => {
-      buffer = Buffer.concat([buffer, chunk]);
+      buffer += chunk.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Keep incomplete line
 
-      while (buffer.length >= 4) {
-        const len = buffer.readUInt32LE(0);
-        if (buffer.length < 4 + len) break;
-
-        const json = buffer.subarray(4, 4 + len).toString('utf8');
-        buffer = buffer.subarray(4 + len);
-
+      for (const line of lines) {
+        if (!line.trim()) continue;
         try {
-          const msg = JSON.parse(json);
+          const msg = JSON.parse(line);
           const resolver = pendingRequests.get(msg.id);
           if (resolver) {
             pendingRequests.delete(msg.id);
@@ -79,12 +77,8 @@ function sendCommand(type, params = {}) {
 
     pendingRequests.set(id, resolve);
 
-    const json = JSON.stringify(msg);
-    const len = Buffer.byteLength(json, 'utf8');
-    const buf = Buffer.alloc(4 + len);
-    buf.writeUInt32LE(len, 0);
-    buf.write(json, 4, 'utf8');
-    socket.write(buf);
+    // Newline-delimited JSON
+    socket.write(JSON.stringify(msg) + '\n');
 
     // 超时
     setTimeout(() => {
